@@ -1,5 +1,5 @@
 import { Paste } from './types';
-import { prisma } from './prisma';
+// Removed top-level prisma import to prevent crash when DATABASE_URL is missing
 
 export interface PasteStore {
     createPaste(paste: Paste): Promise<string>;
@@ -9,6 +9,7 @@ export interface PasteStore {
 
 export class PrismaPasteStore implements PasteStore {
     async createPaste(paste: Paste): Promise<string> {
+        const { prisma } = await import('./prisma');
         // Prisma's create returns the created object, including the generated ID
         const created = await prisma.paste.create({
             data: {
@@ -24,6 +25,7 @@ export class PrismaPasteStore implements PasteStore {
     }
 
     async getPaste(id: string, effectiveTime: number = Date.now()): Promise<Paste | null> {
+        const { prisma } = await import('./prisma');
         // Transaction to ensure we atomically check and decrement views
         return await prisma.$transaction(async (tx) => {
             const paste = await tx.paste.findUnique({
@@ -45,15 +47,6 @@ export class PrismaPasteStore implements PasteStore {
                 }
 
                 // Decrement views atomically
-                // We use updateMany here with a 'where' clause that checks remainingViews > 0
-                // to prevent race conditions where multiple requests might decrement below 0
-                // however, findUnique + update in transaction is also decent but update with where is safer.
-                // Since we are in a transaction with default isolation, let's use a specific update approach.
-
-                // Refetch or rely on transaction isolation?
-                // Safest approach for high concurrency without strict isolation level knowledge:
-                // Try to update where id=id AND remainingViews > 0.
-
                 const result = await tx.paste.updateMany({
                     where: {
                         id: id,
@@ -80,6 +73,7 @@ export class PrismaPasteStore implements PasteStore {
 
     async healthCheck(): Promise<boolean> {
         try {
+            const { prisma } = await import('./prisma');
             await prisma.$queryRaw`SELECT 1`;
             return true;
         } catch (e) {
@@ -105,8 +99,6 @@ class MemoryPasteStore implements PasteStore {
     async createPaste(paste: Paste): Promise<string> {
         const { v4: uuidv4 } = await import('uuid');
         const id = uuidv4();
-        // Mimic Prisma behavior by setting ID before storage if needed, 
-        // but here we just store the paste object as is.
         this.store.set(id, JSON.stringify(paste));
         return id;
     }
