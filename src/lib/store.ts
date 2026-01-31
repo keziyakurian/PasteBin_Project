@@ -1,4 +1,4 @@
-import { Paste } from './types';
+import { Paste } from './types.js';
 // Removed top-level prisma import to prevent crash when DATABASE_URL is missing
 
 export interface PasteStore {
@@ -9,7 +9,7 @@ export interface PasteStore {
 
 export class PrismaPasteStore implements PasteStore {
     async createPaste(paste: Paste): Promise<string> {
-        const { prisma } = await import('./prisma');
+        const { prisma } = await import('./prisma.js');
         // Prisma's create returns the created object, including the generated ID
         const created = await prisma.paste.create({
             data: {
@@ -25,7 +25,7 @@ export class PrismaPasteStore implements PasteStore {
     }
 
     async getPaste(id: string, effectiveTime: number = Date.now()): Promise<Paste | null> {
-        const { prisma } = await import('./prisma');
+        const { prisma } = await import('./prisma.js');
         // Transaction to ensure we atomically check and decrement views
         return await prisma.$transaction(async (tx) => {
             const paste = await tx.paste.findUnique({
@@ -73,7 +73,7 @@ export class PrismaPasteStore implements PasteStore {
 
     async healthCheck(): Promise<boolean> {
         try {
-            const { prisma } = await import('./prisma');
+            const { prisma } = await import('./prisma.js');
             await prisma.$queryRaw`SELECT 1`;
             return true;
         } catch (e) {

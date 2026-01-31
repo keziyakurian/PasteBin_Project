@@ -1,5 +1,5 @@
-import { getStore } from './store';
-import { Paste } from './types';
+import { getStore } from './store.js';
+import { Paste } from './types.js';
 
 export async function getPaste(id: string, effectiveTime?: number): Promise<Paste | null> {
   const store = getStore();
