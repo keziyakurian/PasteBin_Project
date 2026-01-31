@@ -12,6 +12,16 @@ app.use(express.json());
 // API Routes
 app.use('/api', routes);
 
+// Simple escape function to prevent XSS
+function escapeHtml(unsafe: string) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
     // Handle /p/:id specifically to inject paste content for "SSR" (client-side hydration source)
@@ -51,7 +61,8 @@ if (process.env.NODE_ENV === 'production') {
             html = html.replace('<!-- __INJECT_PASTE__ -->', scriptTag);
 
             // Also inject into a noscript tag for pure "content in HTML" requirement check scanners
-            const noScriptContent = `<noscript><div id="paste-content">${paste.content}</div></noscript>`;
+            const safeContent = escapeHtml(paste.content);
+            const noScriptContent = `<noscript><div id="paste-content">${safeContent}</div></noscript>`;
             html = html.replace('<!-- __INJECT_NOSCRIPT__ -->', noScriptContent);
 
             res.send(html);
