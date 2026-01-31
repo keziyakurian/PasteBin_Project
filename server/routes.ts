@@ -1,6 +1,6 @@
 import express from 'express';
-import { createPaste, getPaste, checkHealth } from '../src/lib/paste-service';
-import { CreatePasteRequest } from '../src/lib/types';
+import { createPaste, getPaste, checkHealth } from '../src/lib/paste-service.js';
+import { CreatePasteRequest } from '../src/lib/types.js';
 
 const router = express.Router();
 

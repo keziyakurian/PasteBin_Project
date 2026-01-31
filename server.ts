@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import routes from './server/routes';
+import routes from './server/routes.js';
 import path from 'path';
 
 import { fileURLToPath } from 'url';
