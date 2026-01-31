@@ -1,0 +1,58 @@
+import express from 'express';
+import { createPaste, getPaste, checkHealth } from '../src/lib/paste-service';
+import { CreatePasteRequest } from '../src/lib/types';
+
+const router = express.Router();
+
+router.get('/health', async (req, res) => {
+  const isHealthy = await checkHealth();
+  if (isHealthy) {
+    res.status(200).json({ status: 'ok' });
+  } else {
+    res.status(503).json({ status: 'error', message: 'Storage unavailable' });
+  }
+});
+
+router.post('/pastes', async (req, res) => {
+  try {
+    const body = req.body as CreatePasteRequest;
+    
+    // Basic validation
+    if (!body.content) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+
+    const paste = {
+      content: body.content,
+      created_at: Date.now(),
+      ttl_seconds: body.ttl_seconds,
+      max_views: body.max_views,
+      remaining_views: body.max_views ? body.max_views : null,
+      expires_at: body.ttl_seconds ? Date.now() + body.ttl_seconds * 1000 : null
+    };
+
+    const id = await createPaste(paste);
+    res.status(201).json({ id, url: `/p/${id}` });
+  } catch (error) {
+    console.error('Create paste error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+router.get('/pastes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const paste = await getPaste(id);
+    
+    if (!paste) {
+      return res.status(404).json({ error: 'Paste not found or expired' });
+    }
+
+    res.json(paste);
+  } catch (error) {
+    console.error('Get paste error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+export default router;

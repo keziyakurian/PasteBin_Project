@@ -1,7 +1,5 @@
 import { Paste } from './types';
-import { v4 as uuidv4 } from 'uuid';
-import { getEffectiveTime } from './time';
-import { redis } from './redis';
+import { prisma } from './prisma';
 
 export interface PasteStore {
     createPaste(paste: Paste): Promise<string>;
@@ -9,80 +7,90 @@ export interface PasteStore {
     healthCheck(): Promise<boolean>;
 }
 
-// Redis Implementation with Lua Script
-const GET_PASTE_SCRIPT = `
-  local key = KEYS[1]
-  local now = tonumber(ARGV[1])
-  local data = redis.call("GET", key)
-
-  if not data then
-    return nil
-  end
-
-  local paste = cjson.decode(data)
-
-  if paste.expires_at and paste.expires_at < now then
-    redis.call("DEL", key)
-    return nil
-  end
-
-  if paste.remaining_views then
-    local views = tonumber(paste.remaining_views)
-    if views <= 0 then
-      redis.call("DEL", key)
-      return nil
-    end
-    
-    paste.remaining_views = views - 1
-    
-    redis.call("SET", key, cjson.encode(paste))
-    
-    if paste.expires_at then
-       local remaining_ms = paste.expires_at - now
-       if remaining_ms > 0 then
-           redis.call("PEXPIRE", key, remaining_ms)
-       end
-    end
-  end
-
-  return cjson.encode(paste)
-`;
-
-export class RedisPasteStore implements PasteStore {
+export class PrismaPasteStore implements PasteStore {
     async createPaste(paste: Paste): Promise<string> {
-        const id = uuidv4();
-        const pipeline = redis.pipeline();
-        pipeline.set(`paste:${id}`, JSON.stringify(paste));
-        if (paste.ttl_seconds) {
-            pipeline.expire(`paste:${id}`, paste.ttl_seconds);
-        }
-        await pipeline.exec();
-        return id;
+        // Prisma's create returns the created object, including the generated ID
+        const created = await prisma.paste.create({
+            data: {
+                content: paste.content,
+                createdAt: new Date(paste.created_at),
+                // Only set these if they are present
+                expiresAt: paste.expires_at ? new Date(paste.expires_at) : null,
+                maxViews: paste.max_views || null,
+                remainingViews: paste.remaining_views || null,
+            },
+        });
+        return created.id;
     }
 
     async getPaste(id: string): Promise<Paste | null> {
-        const now = await getEffectiveTime();
-        const result = await redis.eval(GET_PASTE_SCRIPT, 1, `paste:${id}`, now);
-        if (!result) return null;
-        return JSON.parse(result as string) as Paste;
+        const now = new Date();
+
+        // Transaction to ensure we atomically check and decrement views
+        return await prisma.$transaction(async (tx) => {
+            const paste = await tx.paste.findUnique({
+                where: { id },
+            });
+
+            if (!paste) return null;
+
+            // Check Expiry
+            if (paste.expiresAt && paste.expiresAt < now) {
+                // Optionally delete expired pastes
+                // await tx.paste.delete({ where: { id } });
+                return null;
+            }
+
+            // Check Views
+            if (paste.remainingViews !== null) {
+                if (paste.remainingViews <= 0) {
+                    // Optionally delete consumed pastes
+                    // await tx.paste.delete({ where: { id } });
+                    return null;
+                }
+
+                // Decrement views
+                const updated = await tx.paste.update({
+                    where: { id },
+                    data: { remainingViews: { decrement: 1 } },
+                });
+
+                return this.mapToPaste(updated);
+            }
+
+            return this.mapToPaste(paste);
+        });
     }
 
     async healthCheck(): Promise<boolean> {
         try {
-            await redis.ping();
+            await prisma.$queryRaw`SELECT 1`;
             return true;
         } catch (e) {
             return false;
         }
     }
+
+    private mapToPaste(record: any): Paste {
+        return {
+            content: record.content,
+            created_at: record.createdAt.getTime(),
+            expires_at: record.expiresAt ? record.expiresAt.getTime() : undefined,
+            max_views: record.maxViews || undefined,
+            remaining_views: record.remainingViews,
+        };
+    }
 }
 
-// In-Memory Implementation
+// In-Memory Implementation (kept for local dev without DB)
 class MemoryPasteStore implements PasteStore {
     private store = new Map<string, string>(); // ID -> JSON string
 
     async createPaste(paste: Paste): Promise<string> {
+        const { v4: uuidv4 } = await import('uuid');
         const id = uuidv4();
+        // Mimic Prisma behavior by setting ID before storage if needed, 
+        // but here we just store the paste object as is.
         this.store.set(id, JSON.stringify(paste));
         return id;
     }
@@ -92,7 +100,7 @@ class MemoryPasteStore implements PasteStore {
         if (!data) return null;
 
         const paste = JSON.parse(data) as Paste;
-        const now = await getEffectiveTime();
+        const now = Date.now();
 
         // Check Expiry
         if (paste.expires_at && paste.expires_at < now) {
@@ -122,11 +130,10 @@ class MemoryPasteStore implements PasteStore {
 // Factory to choose store
 export function getStore(): PasteStore {
     if (process.env.USE_MEMORY_STORE === '1') {
-        // Singleton for memory store to persist across hot reloads in dev (mostly)
         if (!(global as any).memoryStore) {
             (global as any).memoryStore = new MemoryPasteStore();
         }
         return (global as any).memoryStore;
     }
-    return new RedisPasteStore();
+    return new PrismaPasteStore();
 }
