@@ -9,25 +9,33 @@ export default function PasteView() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchPaste = async () => {
-            try {
-                const res = await fetch(`/api/pastes/${id}`);
-                if (!res.ok) {
-                    if (res.status === 404) {
-                        throw new Error('Paste not found or expired');
-                    }
-                    throw new Error('Failed to fetch paste');
-                }
-                const data = await res.json();
-                setPaste(data);
-            } catch (err: any) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
+        // Check for initial data injected by the server
+        const initialData = (window as any).__INITIAL_PASTE__;
 
-        if (id) {
+        if (initialData && initialData.id === id) {
+            setPaste(initialData);
+            setLoading(false);
+            // Clean up to prevent reuse on other pages
+            (window as any).__INITIAL_PASTE__ = undefined;
+        } else if (id) {
+            // Fallback to API if no initial data or ID mismatch (client-side nav)
+            const fetchPaste = async () => {
+                try {
+                    const res = await fetch(`/api/pastes/${id}`);
+                    if (!res.ok) {
+                        if (res.status === 404) {
+                            throw new Error('Paste not found or expired');
+                        }
+                        throw new Error('Failed to fetch paste');
+                    }
+                    const data = await res.json();
+                    setPaste(data);
+                } catch (err: any) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
             fetchPaste();
         }
     }, [id]);

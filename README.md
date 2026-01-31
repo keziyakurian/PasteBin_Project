@@ -59,7 +59,38 @@ Refactored to a **Modern Full-Stack Architecture** using **Vite, React, Express,
    ```
    - Frontend: [http://localhost:5173](http://localhost:5173)
    - Backend API: [http://localhost:3000](http://localhost:3000)
+   - Backend API: [http://localhost:3000](http://localhost:3000)
 
+## Persistence Layer
+
+**Choice**: PostgreSQL (via Prisma ORM).
+**Why**: PostgreSQL offers robust reliability, relational integrity, and scalability. It is the industry standard for production-grade applications.
+**Local Development Fallback**: If a database is not available, you can set `USE_MEMORY_STORE=1` in your `.env` file to use an **In-Memory Store** for testing purposes.
+
+## Design Decisions
+
+- **Architecture**: Vite (React) + Express Backend. Separation of concerns allows for independent scaling and modern frontend development experience.
+- **Server-Side Injection**: For `GET /p/:id`, the server injects the paste data directly into the HTML. This ensures fast First Contentful Paint (FCP) and meets the requirement to return HTML containing content, while preventing double-counting of views.
+- **Atomic Operations**: View limits are enforced using database transactions (or atomic checks) to prevent race conditions.
+
+## Deterministic Testing
+
+The application supports deterministic time testing for strict TTL verification.
+
+1. Set `TEST_MODE=1` in your `.env` or environment variables.
+2. Send the `x-test-now-ms` header with the desired timestamp (milliseconds since epoch).
+3. The server will use this timestamp for all expiry logic instead of system time.
+
+## Automated Verification
+
+A verification script is included to test all functional requirements locally.
+
+```bash
+npm run build
+NODE_ENV=production TEST_MODE=1 USE_MEMORY_STORE=1 npx tsx server.ts
+# In a separate terminal:
+node scripts/verify-submission.mjs
+```
 ## Scripts
 
 - `npm run dev`: Starts both Vite (Frontend) and Nodemon (Backend) concurrently.

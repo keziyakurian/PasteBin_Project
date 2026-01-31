@@ -1,9 +1,9 @@
 import { getStore } from './store';
 import { Paste } from './types';
 
-export async function getPaste(id: string): Promise<Paste | null> {
+export async function getPaste(id: string, effectiveTime?: number): Promise<Paste | null> {
   const store = getStore();
-  return store.getPaste(id);
+  return store.getPaste(id, effectiveTime);
 }
 
 export async function createPaste(paste: Paste): Promise<string> {

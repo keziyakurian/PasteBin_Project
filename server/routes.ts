@@ -16,7 +16,7 @@ router.get('/health', async (req, res) => {
 router.post('/pastes', async (req, res) => {
   try {
     const body = req.body as CreatePasteRequest;
-    
+
     // Basic validation
     if (!body.content) {
       return res.status(400).json({ error: 'Content is required' });
@@ -42,8 +42,19 @@ router.post('/pastes', async (req, res) => {
 router.get('/pastes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const paste = await getPaste(id);
-    
+
+    // Extract optional test time from headers
+    let effectiveTime: number | undefined;
+    const testTimeHeader = req.headers['x-test-now-ms'];
+    if (process.env.TEST_MODE === '1' && typeof testTimeHeader === 'string') {
+      const parsed = parseInt(testTimeHeader, 10);
+      if (!isNaN(parsed)) {
+        effectiveTime = parsed;
+      }
+    }
+
+    const paste = await getPaste(id, effectiveTime);
+
     if (!paste) {
       return res.status(404).json({ error: 'Paste not found or expired' });
     }

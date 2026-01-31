@@ -3,7 +3,7 @@ import { prisma } from './prisma';
 
 export interface PasteStore {
     createPaste(paste: Paste): Promise<string>;
-    getPaste(id: string): Promise<Paste | null>;
+    getPaste(id: string, effectiveTime?: number): Promise<Paste | null>;
     healthCheck(): Promise<boolean>;
 }
 
@@ -23,9 +23,7 @@ export class PrismaPasteStore implements PasteStore {
         return created.id;
     }
 
-    async getPaste(id: string): Promise<Paste | null> {
-        const now = new Date();
-
+    async getPaste(id: string, effectiveTime: number = Date.now()): Promise<Paste | null> {
         // Transaction to ensure we atomically check and decrement views
         return await prisma.$transaction(async (tx) => {
             const paste = await tx.paste.findUnique({
@@ -35,27 +33,45 @@ export class PrismaPasteStore implements PasteStore {
             if (!paste) return null;
 
             // Check Expiry
-            if (paste.expiresAt && paste.expiresAt < now) {
-                // Optionally delete expired pastes
-                // await tx.paste.delete({ where: { id } });
+            if (paste.expiresAt && paste.expiresAt.getTime() < effectiveTime) {
+                // Return null if expired
                 return null;
             }
 
             // Check Views
             if (paste.remainingViews !== null) {
                 if (paste.remainingViews <= 0) {
-                    // Optionally delete consumed pastes
-                    // await tx.paste.delete({ where: { id } });
                     return null;
                 }
 
-                // Decrement views
-                const updated = await tx.paste.update({
-                    where: { id },
-                    data: { remainingViews: { decrement: 1 } },
+                // Decrement views atomically
+                // We use updateMany here with a 'where' clause that checks remainingViews > 0
+                // to prevent race conditions where multiple requests might decrement below 0
+                // however, findUnique + update in transaction is also decent but update with where is safer.
+                // Since we are in a transaction with default isolation, let's use a specific update approach.
+
+                // Refetch or rely on transaction isolation?
+                // Safest approach for high concurrency without strict isolation level knowledge:
+                // Try to update where id=id AND remainingViews > 0.
+
+                const result = await tx.paste.updateMany({
+                    where: {
+                        id: id,
+                        remainingViews: { gt: 0 }
+                    },
+                    data: {
+                        remainingViews: { decrement: 1 }
+                    }
                 });
 
-                return this.mapToPaste(updated);
+                if (result.count === 0) {
+                    // Update failed, likely because remainingViews was 0 (race condition handled)
+                    return null;
+                }
+
+                // Fetch the updated record to return
+                const updated = await tx.paste.findUnique({ where: { id } });
+                return updated ? this.mapToPaste(updated) : null;
             }
 
             return this.mapToPaste(paste);
@@ -95,15 +111,13 @@ class MemoryPasteStore implements PasteStore {
         return id;
     }
 
-    async getPaste(id: string): Promise<Paste | null> {
+    async getPaste(id: string, effectiveTime: number = Date.now()): Promise<Paste | null> {
         const data = this.store.get(id);
         if (!data) return null;
 
         const paste = JSON.parse(data) as Paste;
-        const now = Date.now();
-
         // Check Expiry
-        if (paste.expires_at && paste.expires_at < now) {
+        if (paste.expires_at && paste.expires_at < effectiveTime) {
             this.store.delete(id);
             return null;
         }
