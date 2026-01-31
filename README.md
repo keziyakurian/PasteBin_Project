@@ -4,7 +4,7 @@ A production-ready text sharing service built with a focus on concurrency safety
 
 ## 🚀 Deployment
 
-- **Live URL**: [Insert your Vercel URL here]
+- **Live URL**: [https://paste-bin-project-jade.vercel.app](https://paste-bin-project-jade.vercel.app)
 - **API Health Check**: `GET /api/health`
 
 ## 🛠 Tech Stack
