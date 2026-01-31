@@ -2,6 +2,7 @@
   "name": "pastebin-lite",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "concurrently \"vite\" \"nodemon server.ts\"",
     "build": "vite build && tsc",

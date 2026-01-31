@@ -3,6 +3,11 @@ import cors from 'cors';
 import routes from './server/routes';
 import path from 'path';
 
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -43,7 +48,7 @@ if (process.env.NODE_ENV === 'production') {
                 effectiveTime = parseInt(testTimeHeader, 10);
             }
 
-            const { getPaste } = await import('./src/lib/paste-service');
+            const { getPaste } = await import('./src/lib/paste-service.js'); // Add .js extension for ESM
             const paste = await getPaste(req.params.id, effectiveTime);
 
             if (!paste) {
@@ -81,8 +86,11 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 
-// Only listen if run directly (not imported as a module)
-if (require.main === module) {
+// Only listen if run directly (ESM check)
+// In ESM, import.meta.url === process.argv[1] logic is complex, 
+// usually we just check if the file is the entry point differently or rely on Vite in dev.
+// For production server.js:
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
     });
