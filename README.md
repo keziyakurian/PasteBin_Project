@@ -1,72 +1,75 @@
 # Pastebin Lite
 
 A secure, minimalist pastebin application with Time-to-Live (TTL) and View Count constraints.
-Built with Next.js 14, Tailwind CSS, and Redis.
+Refactored to a **Modern Full-Stack Architecture** using **Vite, React, Express, and Prisma**.
 
 ## Features
 
-- **Create Pastes**: Securely share text.
-- **Expiry Constraints**: Set pastes to expire after a duration or a number of views.
-- **Deterministic Testing**: Supports ensuring expiry logic via `x-test-now-ms` header.
-- **Responsive UI**: Glassmorphism design with Dark Mode by default.
+- **Create Pastes**: Securely share text with syntax highlighting support.
+- **Expiry Constraints**: Set pastes to expire after a specific duration or a maximum number of views.
+- **Responsive UI**: Beautiful "Glassmorphism" design with Dark Mode support.
+- **Full Stack**: robust React frontend served by Vite, backed by a scalable Express API and Prisma ORM.
+
+## Tech Stack
+
+- **Frontend**: React 19, Vite, Tailwind CSS v4, Lucide React
+- **Backend**: Express.js
+- **Database**: PostgreSQL (via Prisma ORM)
+- **Tooling**: TypeScript, ESLint, Concurrently
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- Redis (Local or Vercel KV)
+- PostgreSQL Database (recommended)
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the repository:**
    ```bash
-   git clone <repo-url>
-   cd pastebin-lite
+   git clone https://github.com/keziyakurian/PasteBin_Project.git
+   cd PasteBin_Project
    ```
 
-2. Install dependencies:
+2. **Install dependencies:**
    ```bash
    npm install
    ```
 
-3. Configure Environment:
-   Create `.env.local`:
+3. **Configure Environment:**
+   Create a `.env` file in the root directory:
+   ```env
+   DATABASE_URL="postgresql://johndoe:randompassword@localhost:5432/mydb?schema=public"
+   PORT=3000
+   ```
+   *Replace the `DATABASE_URL` with your actual PostgreSQL connection string.*
+
+4. **Initialize Database:**
+   Generate the Prisma client and push the schema to your database:
    ```bash
-   REDIS_URL=redis://localhost:6379
-   # TEST_MODE=1  # Enable for deterministic testing
+   npx prisma generate
+   npx prisma db push
    ```
 
-4. Run Development Server:
+5. **Run Development Server:**
+   Start both the frontend and backend concurrently:
    ```bash
    npm run dev
    ```
+   - Frontend: [http://localhost:5173](http://localhost:5173)
+   - Backend API: [http://localhost:3000](http://localhost:3000)
 
-   Visit [http://localhost:3000](http://localhost:3000).
+## Scripts
 
-## Persistence Layer
+- `npm run dev`: Starts both Vite (Frontend) and Nodemon (Backend) concurrently.
+- `npm run build`: Builds the React frontend for production.
+- `npm start`: Starts the production backend server.
+- `npm run lint`: Lints the codebase using ESLint.
 
-**Choice**: Redis (via `ioredis`).
-**Why**: Redis is ideal for ephemeral data with TTL support. It offers atomic operations (needed for accurate view counting concurrency) and is highly performant.
+## Project Structure
 
-> [!NOTE]
-> **Local Development Fallback**: If Redis is not running locally, the application will automatically switch to an **In-Memory Store** to allow development and testing. This is controlled by `USE_MEMORY_STORE=1` in `.env.local`. Ensure to use a real Redis instance for production.
-
-## Design Decisions
-
-- **Architecture**: Next.js App Router.
-- **Atomicity**: Used Lua scripts for `GET` operations to ensure that checking expiry/views and decrementing counts happens atomically.
-- **UI**: "Glassmorphism" aesthetic.
-
-## Testing
-
-To run the verification script:
-
-1. Start the server with `TEST_MODE=1`:
-   ```bash
-   TEST_MODE=1 npm run dev
-   ```
-2. In another terminal run:
-   ```bash
-   node scripts/verify.mjs
-   ```
+- `src/`: React frontend application (Pages, Components, Styles).
+- `server/`: Express backend routes and controllers.
+- `prisma/`: Database schema definitions.
+- `api/`: Backend entry point (Vercel serverless compatible).
