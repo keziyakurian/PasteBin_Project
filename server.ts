@@ -29,6 +29,9 @@ function escapeHtml(unsafe: string) {
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
+    const DIST_DIR = path.join(process.cwd(), 'dist');
+    app.use(express.static(DIST_DIR));
+
     // Handle /p/:id specifically to inject paste content for "SSR" (client-side hydration source)
     // This meets the requirement: "GET /p/:id - Returns HTML (200) containing the paste content"
     app.get('/p/:id', async (req, res) => {
@@ -52,12 +55,12 @@ if (process.env.NODE_ENV === 'production') {
             const paste = await getPaste(req.params.id, effectiveTime);
 
             if (!paste) {
-                return res.status(404).sendFile(path.join(__dirname, 'dist', 'index.html'));
+                return res.status(404).sendFile(path.join(DIST_DIR, 'index.html'));
             }
 
             // Read the index.html from dist
             const fs = await import('fs/promises');
-            let html = await fs.readFile(path.join(__dirname, 'dist', 'index.html'), 'utf-8');
+            let html = await fs.readFile(path.join(DIST_DIR, 'index.html'), 'utf-8');
 
             // Inject the paste data safely
             const scriptTag = `<script>window.__INITIAL_PASTE__ = ${JSON.stringify(paste).replace(/</g, '\\u003c')};</script>`;
@@ -78,11 +81,9 @@ if (process.env.NODE_ENV === 'production') {
         }
     });
 
-    app.use(express.static(path.join(__dirname, 'dist')));
-
     // SPA Fallback for Express 5
     app.get(/(.*)/, (req, res) => {
-        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+        res.sendFile(path.join(DIST_DIR, 'index.html'));
     });
 }
 
