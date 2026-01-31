@@ -4,7 +4,7 @@ import { CreatePasteRequest } from '../src/lib/types.js';
 
 const router = express.Router();
 
-router.get('/health', async (req, res) => {
+router.get('/healthz', async (req, res) => {
   const isHealthy = await checkHealth();
   if (isHealthy) {
     res.status(200).json({ status: 'ok' });
