@@ -143,7 +143,8 @@ class MemoryPasteStore implements PasteStore {
 
 // Factory to choose store
 export function getStore(): PasteStore {
-    if (process.env.USE_MEMORY_STORE === '1') {
+    // Automatically fall back to memory store if explicitly requested OR if no Database URL is provided
+    if (process.env.USE_MEMORY_STORE === '1' || !process.env.DATABASE_URL) {
         if (!(global as any).memoryStore) {
             (global as any).memoryStore = new MemoryPasteStore();
         }
