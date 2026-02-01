@@ -129,12 +129,7 @@ export default function Home() {
                                 className="bg-transparent border-none outline-none text-white w-full text-sm font-mono truncate"
                                 onClick={(e) => e.currentTarget.select()}
                             />
-                            <button
-                                onClick={() => navigator.clipboard.writeText(window.location.origin + result.url)}
-                                className="p-2 text-xs font-medium text-gray-400 hover:text-white transition-colors"
-                            >
-                                Copy
-                            </button>
+                            <CopyButton text={window.location.origin + result.url} />
                         </div>
                         <div className="text-center">
                             <a href={result.url} className="text-blue-400 hover:text-blue-300 text-sm underline underline-offset-4">
@@ -145,5 +140,35 @@ export default function Home() {
                 )}
             </div>
         </div>
+    );
+}
+
+function CopyButton({ text }: { text: string }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
+
+    return (
+        <button
+            onClick={handleCopy}
+            className="p-2 text-xs font-medium text-gray-400 hover:text-white transition-colors min-w-[50px] flex justify-center"
+            title="Copy to clipboard"
+        >
+            {copied ? (
+                <span className="text-green-400 flex items-center gap-1">
+                    ✓
+                </span>
+            ) : (
+                'Copy'
+            )}
+        </button>
     );
 }
