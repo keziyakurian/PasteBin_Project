@@ -1,6 +1,7 @@
 import express from 'express';
 import { createPaste, getPaste, checkHealth } from '../src/lib/paste-service.js';
 import { CreatePasteRequest } from '../src/lib/types.js';
+import { PasteNotFoundError, PasteExpiredError, PasteViewLimitError } from '../src/lib/errors.js';
 
 const router = express.Router();
 
@@ -54,13 +55,18 @@ router.get('/pastes/:id', async (req, res) => {
     }
 
     const paste = await getPaste(id, effectiveTime);
-
-    if (!paste) {
-      return res.status(404).json({ error: 'Paste not found or expired' });
-    }
-
     res.json(paste);
   } catch (error) {
+    if (error instanceof PasteNotFoundError) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'The paste ID provided does not exist.' });
+    }
+    if (error instanceof PasteExpiredError) {
+      return res.status(410).json({ error: 'EXPIRED_TIME', message: 'This paste has expired based on its TTL setting.' });
+    }
+    if (error instanceof PasteViewLimitError) {
+      return res.status(410).json({ error: 'EXPIRED_VIEWS', message: 'This paste has reached its maximum view limit.' });
+    }
+
     console.error('Get paste error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }

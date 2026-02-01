@@ -52,10 +52,15 @@ if (process.env.NODE_ENV === 'production') {
             }
 
             const { getPaste } = await import('./src/lib/paste-service.js'); // Add .js extension for ESM
-            const paste = await getPaste(req.params.id, effectiveTime);
-
-            if (!paste) {
-                return res.status(404).sendFile(path.join(DIST_DIR, 'index.html'));
+            let paste;
+            try {
+                paste = await getPaste(req.params.id, effectiveTime);
+            } catch (err: any) {
+                // If known error, fall back to client-side rendering (which will fetch and show error)
+                if (['PasteNotFoundError', 'PasteExpiredError', 'PasteViewLimitError'].includes(err.name)) {
+                    return res.sendFile(path.join(DIST_DIR, 'index.html'));
+                }
+                throw err;
             }
 
             // Read the index.html from dist

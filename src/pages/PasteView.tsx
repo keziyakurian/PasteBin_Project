@@ -23,10 +23,8 @@ export default function PasteView() {
                 try {
                     const res = await fetch(`/api/pastes/${id}`);
                     if (!res.ok) {
-                        if (res.status === 404) {
-                            throw new Error('Paste not found or expired');
-                        }
-                        throw new Error('Failed to fetch paste');
+                        const errorData = await res.json();
+                        throw new Error(errorData.message || 'Failed to fetch paste');
                     }
                     const data = await res.json();
                     setPaste(data);

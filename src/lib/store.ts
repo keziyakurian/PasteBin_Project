@@ -1,4 +1,5 @@
 import { Paste } from './types.js';
+import { PasteNotFoundError, PasteExpiredError, PasteViewLimitError } from './errors.js';
 // Removed top-level prisma import to prevent crash when DATABASE_URL is missing
 
 export interface PasteStore {
@@ -32,18 +33,18 @@ export class PrismaPasteStore implements PasteStore {
                 where: { id },
             });
 
-            if (!paste) return null;
+            if (!paste) throw new PasteNotFoundError();
 
             // Check Expiry
             if (paste.expiresAt && paste.expiresAt.getTime() < effectiveTime) {
                 // Return null if expired
-                return null;
+                throw new PasteExpiredError();
             }
 
             // Check Views
             if (paste.remainingViews !== null) {
                 if (paste.remainingViews <= 0) {
-                    return null;
+                    throw new PasteViewLimitError();
                 }
 
                 // Decrement views atomically
@@ -59,7 +60,7 @@ export class PrismaPasteStore implements PasteStore {
 
                 if (result.count === 0) {
                     // Update failed, likely because remainingViews was 0 (race condition handled)
-                    return null;
+                    throw new PasteViewLimitError();
                 }
 
                 // Fetch the updated record to return
@@ -105,20 +106,20 @@ class MemoryPasteStore implements PasteStore {
 
     async getPaste(id: string, effectiveTime: number = Date.now()): Promise<Paste | null> {
         const data = this.store.get(id);
-        if (!data) return null;
+        if (!data) throw new PasteNotFoundError();
 
         const paste = JSON.parse(data) as Paste;
         // Check Expiry
         if (paste.expires_at && paste.expires_at < effectiveTime) {
             this.store.delete(id);
-            return null;
+            throw new PasteExpiredError();
         }
 
         // Check Views
         if (paste.remaining_views !== null && paste.remaining_views !== undefined) {
             if (paste.remaining_views <= 0) {
                 this.store.delete(id);
-                return null;
+                throw new PasteViewLimitError();
             }
 
             paste.remaining_views -= 1;
