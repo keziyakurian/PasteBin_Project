@@ -15,6 +15,16 @@ A production-ready text sharing service built with a focus on concurrency safety
 - **Frontend**: React 19 + Vite (SSR-injected for paste viewing)
 - **Deployment**: Vercel (Serverless Functions)
 
+## 📂 Project Architecture
+
+A clean separation of concerns for clarity and ease of navigation:
+
+- **/api**: Production serverless functions for Vercel deployment.
+- **/src**: Frontend React application (Components, Pages, Hooks).
+- **/server**: Local express server setup for rapid verification and testing.
+- **/prisma**: Database schema and migration resources.
+- **/dist**: Production build output (gitignored).
+
 ## 🧠 Design Philosophy & Aganitha Alignment
 
 ### **Precision Timing & Automated Verification**

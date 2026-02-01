@@ -1,7 +1,15 @@
-node_modules
-.env
-dist
-.next
+# System files
 .DS_Store
-coverage
-.vercel
+Thumbs.db
+.vscode/
+
+# Dependencies
+node_modules/
+.env
+
+# Build artifacts
+dist/
+.next/
+coverage/
+.vercel/
+*.tsbuildinfo
