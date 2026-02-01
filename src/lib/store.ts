@@ -111,14 +111,14 @@ class MemoryPasteStore implements PasteStore {
         const paste = JSON.parse(data) as Paste;
         // Check Expiry
         if (paste.expires_at && paste.expires_at < effectiveTime) {
-            this.store.delete(id);
+            // this.store.delete(id); // Keep record to show 410 Gone consistently
             throw new PasteExpiredError();
         }
 
         // Check Views
         if (paste.remaining_views !== null && paste.remaining_views !== undefined) {
             if (paste.remaining_views <= 0) {
-                this.store.delete(id);
+                // this.store.delete(id); // Keep record to show 410 Gone consistently
                 throw new PasteViewLimitError();
             }
 
