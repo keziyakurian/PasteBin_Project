@@ -44,6 +44,12 @@ The functional requirement mandates that the HTML response for `/p/:id` must con
 
 **Why**: This guarantees the grader (and SEO crawlers) sees the content immediately in the DOM without waiting for client-side JavaScript hydration, mimicking the benefits of Server-Side Rendering (SSR) without the overhead of Next.js for this specific use case.
 
+4. **Standardized API Error Handling**
+   To differentiate between a "Missing Paste" (404) and an "Expired Paste" (410), the API returns structured errors:
+   - **404 Not Found**: `{ error: "NOT_FOUND" }` (Invalid ID)
+   - **410 Gone**: `{ error: "EXPIRED_TIME" }` (TTL ended) or `{ error: "EXPIRED_VIEWS" }` (View limit exceeded)
+   - **Why**: This allows automated verification scripts to precisely validation *why* a resource is unavailable, distinguishing logic correctness (expiration) from failure (data loss).
+
 ## 🏃 Local Setup
 
 1. **Clone & Install**:
