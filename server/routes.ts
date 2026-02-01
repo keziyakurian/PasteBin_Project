@@ -61,10 +61,10 @@ router.get('/pastes/:id', async (req, res) => {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'The paste ID provided does not exist.' });
     }
     if (error instanceof PasteExpiredError) {
-      return res.status(410).json({ error: 'EXPIRED_TIME', message: 'This paste has expired based on its TTL setting.' });
+      return res.status(404).json({ error: 'EXPIRED_TIME', message: 'This paste has expired based on its TTL setting.' });
     }
     if (error instanceof PasteViewLimitError) {
-      return res.status(410).json({ error: 'EXPIRED_VIEWS', message: 'This paste has reached its maximum view limit.' });
+      return res.status(404).json({ error: 'EXPIRED_VIEWS', message: 'This paste has reached its maximum view limit.' });
     }
 
     console.error('Get paste error:', error);
