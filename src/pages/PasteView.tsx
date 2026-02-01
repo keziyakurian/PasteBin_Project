@@ -12,7 +12,7 @@ export default function PasteView() {
         // Check for initial data injected by the server
         const initialData = (window as any).__INITIAL_PASTE__;
 
-        if (initialData && initialData.id === id) {
+        if (initialData) {
             setPaste(initialData);
             setLoading(false);
             // Clean up to prevent reuse on other pages
